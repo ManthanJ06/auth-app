@@ -2,45 +2,66 @@ import React, { useState, useEffect } from "react";
 
 const Todo = () => {
   const [form, setForm] = useState({ todo: "" });
-
-  const [todos, setTodos] = useState(() => {
-    const savedTodos = localStorage.getItem("todos");
-    return savedTodos ? JSON.parse(savedTodos) : [];
-  });
-
+  const [todos, setTodos] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
 
-  useEffect(() => {
-    localStorage.setItem("todos", JSON.stringify(todos));
-  }, [todos]);
+  // 🔥 FETCH TASKS FROM BACKEND
+  const fetchTasks = async () => {
+    const res = await fetch("http://localhost:5000/tasks", {
+      credentials: "include",
+    });
 
-  const handleTodoChange = (e) => {
-    setForm({ ...form, todo: e.target.value });
+    const data = await res.json();
+    setTodos(data);
   };
 
-  const handleAdd = () => {
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  // ADD TASK
+  const handleAdd = async () => {
     if (!form.todo.trim()) return;
 
-    setTodos([...todos, { id: Date.now(), text: form.todo }]);
+    const res = await fetch("http://localhost:5000/tasks", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ title: form.todo }),
+    });
+
+    const newTask = await res.json();
+
+    setTodos([...todos, newTask]);
     setForm({ todo: "" });
   };
 
-  const handleRemove = (id) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+  // DELETE TASK
+  const handleRemove = async (id) => {
+    await fetch(`http://localhost:5000/tasks/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    setTodos(todos.filter((todo) => todo._id !== id));
   };
 
+  // EDIT START
   const handleEdit = (todo) => {
-    setEditingId(todo.id);
-    setEditText(todo.text);
+    setEditingId(todo._id);
+    setEditText(todo.title);
   };
 
+  // SAVE EDIT (frontend only for now)
   const handleSave = (id) => {
     if (!editText.trim()) return;
 
     setTodos(
       todos.map((todo) =>
-        todo.id === id ? { ...todo, text: editText } : todo,
+        todo._id === id ? { ...todo, title: editText } : todo,
       ),
     );
 
@@ -48,7 +69,6 @@ const Todo = () => {
     setEditText("");
   };
 
-  // ✅ RETURN MUST BE INSIDE FUNCTION
   return (
     <div
       className="flex flex-col p-4 text-white rounded-lg mt-4 bg-zinc-600 shadow-lg"
@@ -61,7 +81,7 @@ const Todo = () => {
       <input
         type="text"
         value={form.todo}
-        onChange={handleTodoChange}
+        onChange={(e) => setForm({ todo: e.target.value })}
         className="mb-3 h-9 border border-zinc-400 px-2 rounded text-black"
         placeholder="Enter a task..."
       />
@@ -76,10 +96,10 @@ const Todo = () => {
       <div className="flex-1 w-full mt-4 p-2 overflow-auto space-y-2">
         {todos.map((todo) => (
           <div
-            key={todo.id}
+            key={todo._id}
             className="flex items-center justify-between p-2 rounded bg-zinc-700"
           >
-            {editingId === todo.id ? (
+            {editingId === todo._id ? (
               <input
                 type="text"
                 value={editText}
@@ -87,13 +107,13 @@ const Todo = () => {
                 className="flex-1 mr-2 px-2 py-1 text-black rounded"
               />
             ) : (
-              <span className="flex-1">{todo.text}</span>
+              <span className="flex-1">{todo.title}</span>
             )}
 
-            {editingId === todo.id ? (
+            {editingId === todo._id ? (
               <button
                 className="px-2 py-1 bg-green-400 text-black rounded text-sm mr-1"
-                onClick={() => handleSave(todo.id)}
+                onClick={() => handleSave(todo._id)}
               >
                 Save
               </button>
@@ -108,7 +128,7 @@ const Todo = () => {
 
             <button
               className="px-2 py-1 bg-red-400 text-black rounded text-sm"
-              onClick={() => handleRemove(todo.id)}
+              onClick={() => handleRemove(todo._id)}
             >
               Done
             </button>

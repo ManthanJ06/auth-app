@@ -73,7 +73,12 @@ const Login = () => {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
-
+        <p
+          className="text-zinc-300 hover:text-white cursor-pointer text-sm text-center"
+          onClick={() => navigate("/forgot-password")}
+        >
+          Forgot Password?
+        </p>
         {/* ✅ Error Message */}
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
       </form>
